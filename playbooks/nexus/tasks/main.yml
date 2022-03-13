@@ -1,53 +1,50 @@
 ---
----
-    #Update the apt package index and install packages to allow apt to use a repository over HTTPS
-     - name: Update apt-get repo and Cache
-       apt: update_cache=yes force_apt_get=yes
-       when: ansible_distribution == "Ubuntu"
+#Update the apt package index and install packages to allow apt to use a repository over HTTPS
+- name: Update apt-get repo and Cache
+  apt: update_cache=yes force_apt_get=yes
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install the pre-requisites
+  apt:
+    name : ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg2' ,'software-properties-common']
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Ubuntu"
 
 
-     - name: Install the pre-requisites
-       apt:
-         name : ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg2' ,'software-properties-common']
-         state: present
-         update_cache: yes
-        when: ansible_distribution == "Ubuntu"
+ #Add Docker’s official GPG key
 
+ - name: Add Docker GPG key
+   apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+   when: ansible_distribution == "Ubuntu"
 
-     #Add Docker’s official GPG key
+ - name: Add Docker APT repository
+   apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable
+   when: ansible_distribution == "Ubuntu"
 
-     - name: Add Docker GPG key
-       apt_key: url=https://download.docker.com/linux/ubuntu/gpg
-       when: ansible_distribution == "Ubuntu"
+ - name: Install Docker packages
+   apt:
+     name: ['docker-ce','docker-ce-cli','containerd.io']
+     state: present
+   when: ansible_distribution == "Ubuntu"
 
-     - name: Add Docker APT repository
-       apt_repository:
-         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable
-       when: ansible_distribution == "Ubuntu"
+ #Install the pip else error will be thrown as "pip should be installed"
+ - name: Install prerequisite
+   apt:
+     name: ['python3-pip', 'python3-setuptools', 'virtualenv']
+     update_cache: yes
+   when: ansible_distribution == "Ubuntu"
 
-     - name: Install Docker packages
-       apt:
-         name: ['docker-ce','docker-ce-cli','containerd.io']
-         state: present
-       when: ansible_distribution == "Ubuntu"
+- name: Install Docker Module for Python
+  pip:
+    name: docker
+  when: ansible_distribution == "Ubuntu"
 
-      #Install the pip else error will be thrown as "pip should be installed"
-
-     - name: Install prerequisites
-       apt:
-         name: ['python3-pip', 'python3-setuptools', 'virtualenv']
-         update_cache: yes
-       when: ansible_distribution == "Ubuntu"
-
-     - name: Install Docker Module for Python
-       pip:
-         name: docker
-       when: ansible_distribution == "Ubuntu"
-
-     - name: Install Docker-compose
-       shell: curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
-       ignore_errors: yes
-       when: ansible_distribution == "Ubuntu"  or anisble_distribution == "Amazon"
+- name: Install Docker-compose
+  shell: curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+  ignore_errors: yes
+  when: ansible_distribution == "Ubuntu"  or anisble_distribution == "Amazon"
 
  
 
