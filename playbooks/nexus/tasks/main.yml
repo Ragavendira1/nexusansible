@@ -1,7 +1,207 @@
 ---
-# tasks file for Nexus
-- import_tasks: install.yml
-  when: ansible_distribution == "Ubuntu"
+---
+    #Update the apt package index and install packages to allow apt to use a repository over HTTPS
+     - name: Update apt-get repo and Cache
+       apt: update_cache=yes force_apt_get=yes
+       when: ansible_distribution == "Ubuntu"
 
-- import_tasks: docker_install.yml
+
+     - name: Install the pre-requisites
+       apt:
+         name : ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg2' ,'software-properties-common']
+         state: present
+         update_cache: yes
+        when: ansible_distribution == "Ubuntu"
+
+
+     #Add Docker’s official GPG key
+
+     - name: Add Docker GPG key
+       apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Add Docker APT repository
+       apt_repository:
+         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Install Docker packages
+       apt:
+         name: ['docker-ce','docker-ce-cli','containerd.io']
+         state: present
+       when: ansible_distribution == "Ubuntu"
+
+      #Install the pip else error will be thrown as "pip should be installed"
+
+     - name: Install prerequisites
+       apt:
+         name: ['python3-pip', 'python3-setuptools', 'virtualenv']
+         update_cache: yes
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Install Docker Module for Python
+       pip:
+         name: docker
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Install Docker-compose
+       shell: curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+       ignore_errors: yes
+       when: ansible_distribution == "Ubuntu"  or anisble_distribution == "Amazon"
+
+ 
+
+
+############################ Adding user to group ##################################################
+- name: Ensure group "docker" exists
+  group:
+   name: docker
+   state: present
+
+- name: Add user "ansibleadm" to docker group
+  user:
+   name: ansibleadm
+   group: docker
+
+
+ ################################## Starting the service ###############################################
+  notify:
+         - start docker service
+####################### Handlers###############
+   handlers:
+     - include: handlers/main.yml
+
+
+(base) ragavendira@Ragavendiras-MacBook-Pro tasks % cat docker_install.yml
+---
+    #Update the apt package index and install packages to allow apt to use a repository over HTTPS
+     - name: Update apt-get repo and Cache
+       apt: update_cache=yes force_apt_get=yes
+       when: ansible_distribution == "Ubuntu"
+
+
+     - name: Install the pre-requisites
+       apt:
+         name : ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg2' ,'software-properties-common']
+         state: present
+         update_cache: yes
+        when: ansible_distribution == "Ubuntu"
+
+
+     #Add Docker’s official GPG key
+
+     - name: Add Docker GPG key
+       apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Add Docker APT repository
+       apt_repository:
+         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Install Docker packages
+       apt:
+         name: ['docker-ce','docker-ce-cli','containerd.io']
+         state: present
+       when: ansible_distribution == "Ubuntu"
+
+      #Install the pip else error will be thrown as "pip should be installed"
+
+     - name: Install prerequisites
+       apt:
+         name: ['python3-pip', 'python3-setuptools', 'virtualenv']
+         update_cache: yes
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Install Docker Module for Python
+       pip:
+         name: docker
+       when: ansible_distribution == "Ubuntu"
+
+     - name: Install Docker-compose
+       shell: curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+       ignore_errors: yes
+       when: ansible_distribution == "Ubuntu"  or anisble_distribution == "Amazon"
+
+ 
+
+
+############################ Adding user to group ##################################################
+- name: Ensure group "docker" exists
+  group:
+   name: docker
+   state: present
+
+- name: Add user "ansibleadm" to docker group
+  user:
+   name: ansibleadm
+   group: docker
+
+
+ ################################## Starting the service ###############################################
+  notify:
+         - start docker service
+####################### Handlers###############
+   handlers:
+     - include: handlers/main.yml
+
+
+# tasks file for Nexus
 #- import_tasks: install.yml
+#  when: ansible_distribution == "Ubuntu"
+
+#- import_tasks: docker_install.yml
+#- import_tasks: install.yml
+  - name: Pull an Image "Sonatype/nexus3"
+    docker_image:
+      name: sonatype/nexus3
+      source: pull
+  - name: Create a Nexus container
+    docker_container:
+      name: Container_Nexus
+      image: sonatype/nexus3
+      ports:
+      - 8081:8081
+      state: started
+  - name: check if container is running
+    shell: docker ps
+  - name: creata a nexus user
+    set_fact:
+      nexus_local_users:
+        - username: my_user
+          first_name: my
+          last_name: user
+          email: my@user.com
+          password: "s3cr3t"
+          roles:
+            - developers
+  - name: apply defaults to bower proxy repos
+    set_fact:
+      nexus_repos_maven_proxy:
+        - name: central
+          remote_url: 'https://repo1.maven.org/maven2/'
+          layout_policy: permissive
+  - name: apply defaults to bower proxy repos
+    set_fact:
+      nexus_repos_docker_proxy:
+        - name: docker-proxy
+          http_port: "{{ 5000 }}"   # need to specify the port number 
+          v1_enabled: True
+          index_type: "HUB"
+          remote_url: "https://registry-1.docker.io"   # need to specify remote registry here
+          use_nexus_certificates_to_access_index: false
+  - name: apply defaults to bower proxy repos
+    set_fact:
+      nexus_repos_docker_hosted:
+        - name: docker-hosted
+          http_port: "{{ 5000 }}"  # need to specify the port number
+          v1_enabled: True
+      notify:
+          - restart a specific container
+      handlers:
+        - name: restart a specific container
+          systemd:
+            name: Container_Nexus
+            state: restarted
+          when: nexus_service_state != 'stopped'
+
