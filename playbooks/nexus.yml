@@ -1,6 +1,6 @@
 ---
 - name: nexus
-  hosts: localhost
+  hosts: all
   become: yes
   roles:
    - nexus
