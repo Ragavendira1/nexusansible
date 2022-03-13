@@ -51,7 +51,7 @@
     - name: Pull an Image "Sonatype/nexus3"
       docker_image:
         name: sonatype/nexus3
-        source: pull
+      
     - name: Create a Nexus container
       docker_container:
         name: Container_Nexus
