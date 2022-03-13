@@ -1,0 +1,6 @@
+---
+- name: nexus
+  hosts: all
+  become: yes
+  roles:
+   - nexus

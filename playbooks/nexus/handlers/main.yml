@@ -1,0 +1,11 @@
+---
+# handlers file for container restart
+- name: restart a specific container
+  docker:
+    name: {{ container_name }}
+    state: restarted
+
+- name: start docker service
+  service:
+    name: docker
+    state: started

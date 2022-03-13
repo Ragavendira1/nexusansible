@@ -1,0 +1,7 @@
+---
+# tasks file for Nexus
+- import_tasks: install.yml
+  when: ansible_distribution == "Ubuntu"
+
+- import_tasks: docker_install.yml
+#- import_tasks: install.yml
