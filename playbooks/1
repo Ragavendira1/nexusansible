@@ -24,7 +24,6 @@
           - python3-pip
           - virtualenv
           - python3-setuptools
-            #          - pip3
         state: latest
         update_cache: true
 
@@ -53,15 +52,20 @@
         name: "{{ default_container_image }}"
         source: pull
 
-    - name: Create nexus containers
+    - name: Create default containers
       community.docker.docker_container:
         name: "{{ default_container_name }}{{ item }}"
         image: "{{ default_container_image }}"
+        command: "{{ default_container_command }}"
+        state: present
+      with_sequence: count={{ container_count }}
+    - name: Create a Nexus container
+      docker_container:
+        name: Container_Nexus
+        image: sonatype/nexus3
         ports:
         - 8081:8081
-          # command: "{{ default_container_command }}"
-        state: started
-      with_sequence: count={{ container_count }}
+      state: started
     - name: check if container is running
       shell: docker ps
     - name: creata a nexus user

@@ -1,2 +1,6 @@
 ---
 # vars file for Nexus
+    container_count: 1
+    default_container_name: nexus
+    default_container_image: sonatype/nexus3
+    default_container_command: sleep 1d

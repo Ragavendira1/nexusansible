@@ -1,0 +1,107 @@
+---
+#Update the apt package index and install packages to allow apt to use a repository over HTTPS
+- name: Update apt-get repo and Cache
+  apt: update_cache=yes force_apt_get=yes
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install the pre-requisites
+  apt:
+    name : ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg2' ,'software-properties-common','python3-pip', 'virtualenv', 'python3-setuptools']
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Ubuntu"
+
+
+ #Add Docker’s official GPG key
+
+- name: Add Docker GPG key
+  apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+  when: ansible_distribution == "Ubuntu"
+- name: Add Docker APT repository
+  apt_repository:
+     repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install Docker packages
+  apt:
+    name: ['docker-ce']    
+    state: present
+  when: ansible_distribution == "Ubuntu"
+- name: Install Docker Module for Python
+  pip:
+    name: docker
+  when: ansible_distribution == "Ubuntu"
+
+############################ Adding user to group ##################################################
+- name: Ensure group "docker" exists
+  group:
+   name: docker
+   state: present
+
+- name: Add user "asgadmin" to docker group
+  user:
+   name: asgadmin
+   group: docker
+
+
+################################## Starting the service ###############################################
+  notify:
+  - start docker service
+####################### Handlers###############
+#handlers:
+#  - include: handlers/main.yml
+################################################
+
+- name: Pull an Image "Sonatype/nexus3"
+  docker_image:
+     name: sonatype/nexus3
+     source: pull
+- name: Create a Nexus container
+  docker_container:
+    name: Container_Nexus
+    image: sonatype/nexus3
+    ports:
+     - 8081:8081
+    state: started
+- name: check if container is running
+  shell: docker ps
+- name: creata a nexus user
+  set_fact:
+    nexus_local_users:
+    - username: my_user
+      first_name: my
+      last_name: user
+      email: my@user.com
+      password: "s3cr3t"
+      roles:
+        - developers
+- name: apply defaults to bower proxy repos
+  set_fact:
+    nexus_repos_maven_proxy:
+    - name: central
+      remote_url: 'https://repo1.maven.org/maven2/'
+      layout_policy: permissive
+- name: apply defaults to bower proxy repos
+  set_fact:
+    nexus_repos_docker_proxy:
+      - name: docker-proxy
+        http_port: "{{ 5000 }}"   # need to specify the port number 
+        v1_enabled: True
+        index_type: "HUB"
+        remote_url: "https://registry-1.docker.io"   # need to specify remote registry here
+        use_nexus_certificates_to_access_index: false
+- name: apply defaults to bower proxy repos
+  set_fact:
+    nexus_repos_docker_hosted:
+     - name: docker-hosted
+       http_port: "{{ 5000 }}"  # need to specify the port number
+       v1_enabled: True
+#notify:
+#  - restart a specific container
+#   handlers:
+#   - name: restart a specific container
+#     systemd:
+#        name: Container_Nexus
+#        state: restarted
+#     when: nexus_service_state != 'stopped'
+
