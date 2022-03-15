@@ -1,6 +1,6 @@
 ---
-- name: Install_Docker
-  ansible.builtin.shell: cd ~ && curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+#- name: Install_Docker
+#  ansible.builtin.shell: cd ~ && curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
 - name: Create a Nexus container
   docker_container:
      name: Container_Nexus
